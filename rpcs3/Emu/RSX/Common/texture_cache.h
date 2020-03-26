@@ -3326,7 +3326,7 @@ namespace rsx
 
 				lock.upgrade();
 
-				cached_dest->reprotect(utils::protection::no, { mem_offset, dst_payload_length });
+				cached_dest->reprotect(g_cfg.video.reprotect_hack ? utils::protection::ro : utils::protection::no, {mem_offset, dst_payload_length});
 				cached_dest->touch(m_cache_update_tag);
 				update_cache_tag();
 
