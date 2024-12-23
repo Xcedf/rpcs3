@@ -5634,7 +5634,7 @@ public:
 			if (auto [ok, bs] = match_expr(b, byteswap(match<u8[16]>())); ok)
 			{
 				// Undo endian swapping, and rely on pshufb/vperm2b to re-reverse endianness
-				if (m_use_avx512_icl && (op.ra != op.rb))
+				/*if (m_use_avx512_icl && (op.ra != op.rb))
 				{
 					if (perm_only)
 					{
@@ -5647,11 +5647,11 @@ public:
 					const auto ab = vperm2b(as, bs, c);
 					set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
 					return;
-				}
+				}*/
 
-				const auto x = pshufb(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
-				const auto ax = pshufb(as, c);
-				const auto bx = pshufb(bs, c);
+				const auto x = pshufb0(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
+				const auto ax = pshufb0(as, c);
+				const auto bx = pshufb0(bs, c);
 
 				if (perm_only)
 					set_vr(op.rt4, select_by_bit4(c, ax, bx));
@@ -5664,7 +5664,7 @@ public:
 			{
 				if (data == v128::from8p(data._u8[0]))
 				{
-					if (m_use_avx512_icl)
+					/*if (m_use_avx512_icl)
 					{
 						if (perm_only)
 						{
@@ -5677,10 +5677,10 @@ public:
 						const auto ab = vperm2b256to128(as, b, c);
 						set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
 						return;
-					}
+					}*/
 					// See above
-					const auto x = pshufb(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
-					const auto ax = pshufb(as, c);
+					const auto x = pshufb0(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
+					const auto ax = pshufb0(as, c);
 
 					if (perm_only)
 						set_vr(op.rt4, select_by_bit4(c, ax, b));
@@ -5698,8 +5698,8 @@ public:
 				if (data == v128::from8p(data._u8[0]))
 				{
 					// See above
-					const auto x = pshufb(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
-					const auto bx = pshufb(bs, c);
+					const auto x = pshufb0(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
+					const auto bx = pshufb0(bs, c);
 
 					if (perm_only)
 						set_vr(op.rt4, select_by_bit4(c, a, bx));
@@ -5710,7 +5710,7 @@ public:
 			}
 		}
 
-		if (m_use_avx512_icl && (op.ra != op.rb || m_interp_magn))
+		/*if (m_use_avx512_icl && (op.ra != op.rb || m_interp_magn))
 		{
 			if (auto [ok, data] = get_const_vector(b.value, m_pos); ok)
 			{
@@ -5760,12 +5760,12 @@ public:
 			const auto ab = vperm2b(a, b, cr);
 			set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
 			return;
-		}
+		}*/
 
-		const auto x = pshufb(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
+		const auto x = pshufb0(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
 		const auto cr = eval(c ^ 0xf);
-		const auto ax = pshufb(a, cr);
-		const auto bx = pshufb(b, cr);
+		const auto ax = pshufb0(a, cr);
+		const auto bx = pshufb0(b, cr);
 
 		if (perm_only)
 			set_vr(op.rt4, select_by_bit4(cr, ax, bx));

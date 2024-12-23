@@ -3826,6 +3826,38 @@ public:
 		});
 	}
 
+	template <typename T, typename U>
+	static auto pshufb0(T&& a, U&& b)
+	{
+		return llvm_calli<u8[16], T, U>{"x86_pshufb0", {std::forward<T>(a), std::forward<U>(b)}}.if_const([](llvm::Value* args[], llvm::IRBuilder<>* ir) -> llvm::Value*
+		{
+			const auto zeros = llvm::ConstantAggregateZero::get(llvm_value_t<u8[16]>::get_type(ir->getContext()));
+			if (auto c = llvm::dyn_cast<llvm::Constant>(args[1]))
+			{
+				// Convert PSHUFB index back to LLVM vector shuffle mask
+				v128 mask{};
+				const auto cv = llvm::dyn_cast<llvm::ConstantDataVector>(c);
+				if (cv)
+				{
+					for (u32 i = 0; i < 16; i++)
+					{
+						const u64 b = cv->getElementAsInteger(i);
+						mask._u8[i] = b < 128 ? b % 16 : 16;
+					}
+				}
+				if (cv || llvm::isa<llvm::ConstantAggregateZero>(c))
+				{
+					llvm::Value* r = nullptr;
+					r = llvm::ConstantDataVector::get(ir->getContext(), llvm::makeArrayRef(reinterpret_cast<const u8*>(&mask), 16));
+					r = ir->CreateZExt(r, llvm_value_t<u32[16]>::get_type(ir->getContext()));
+					r = ir->CreateShuffleVector(args[0], zeros, r);
+					return r;
+				}
+			}
+			return nullptr;
+		});
+	}
+
 	// (m << 3) >= 0 ? a : b
 	template <typename T, typename U, typename V>
 	static auto select_by_bit4(T&& m, U&& a, V&& b)
