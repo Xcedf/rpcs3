@@ -1076,7 +1076,6 @@ namespace vk
 	cached_texture_section* texture_cache::create_nul_section(
 		vk::command_buffer& /*cmd*/,
 		const utils::address_range& rsx_range,
-		const rsx::image_section_attributes_t& attrs,
 		const rsx::GCM_tile_reference& tile,
 		bool memory_load)
 	{
@@ -1085,7 +1084,7 @@ namespace vk
 
 		// Prepare section
 		region.reset(rsx_range);
-		region.create_dma_only(attrs.width, attrs.height, attrs.pitch);
+		region.set_context(rsx::texture_upload_context::dma);
 		region.set_dirty(false);
 		region.set_unpack_swap_bytes(true);
 

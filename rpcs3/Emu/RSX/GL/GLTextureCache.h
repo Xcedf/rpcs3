@@ -709,19 +709,15 @@ namespace gl
 			return &cached;
 		}
 
-		cached_texture_section* create_nul_section(
-			gl::command_context& /*cmd*/,
-			const utils::address_range& rsx_range,
-			const rsx::image_section_attributes_t& attrs,
-			const rsx::GCM_tile_reference& /*tile*/,
-			bool /*memory_load*/) override
+		cached_texture_section* create_nul_section(gl::command_context& /*cmd*/,
+			const utils::address_range& rsx_range, const rsx::GCM_tile_reference& /*tile*/, bool /*memory_load*/) override
 		{
 			auto& cached = *find_cached_texture(rsx_range, { .gcm_format = RSX_GCM_FORMAT_IGNORED }, true, false, false);
 			ensure(!cached.is_locked());
 
 			// Prepare section
 			cached.reset(rsx_range);
-			cached.create_dma_only(attrs.width, attrs.height, attrs.pitch);
+			cached.set_context(rsx::texture_upload_context::dma);
 			cached.set_dirty(false);
 
 			no_access_range = cached.get_min_max(no_access_range, rsx::section_bounds::locked_range);
