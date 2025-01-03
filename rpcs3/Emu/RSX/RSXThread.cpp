@@ -2612,11 +2612,6 @@ namespace rsx
 					const u32 unsigned_remap = (tex.unsigned_remap() == CELL_GCM_TEXTURE_UNSIGNED_REMAP_NORMAL)? 0u : (~(gamma | argb8_signed) & 0xF); // _BX2
 					u32 argb8_convert = gamma;
 
-					// The options are mutually exclusive
-					ensure((argb8_signed & gamma) == 0);
-					ensure((argb8_signed & unsigned_remap) == 0);
-					ensure((gamma & unsigned_remap) == 0);
-
 					// Helper function to apply a per-channel mask based on an input mask
 					const auto apply_sign_convert_mask = [&](u32 mask, u32 bit_offset)
 					{
@@ -2626,13 +2621,14 @@ namespace rsx
 						if (remap_ctrl == 0xAA)
 						{
 							argb8_convert |= (mask & 0xFu) << bit_offset;
-							return;
 						}
-
-						if ((remap_ctrl & 0x03) == 0x02) argb8_convert |= (mask & 0x1u) << bit_offset;
-						if ((remap_ctrl & 0x0C) == 0x08) argb8_convert |= (mask & 0x2u) << bit_offset;
-						if ((remap_ctrl & 0x30) == 0x20) argb8_convert |= (mask & 0x4u) << bit_offset;
-						if ((remap_ctrl & 0xC0) == 0x80) argb8_convert |= (mask & 0x8u) << bit_offset;
+						else
+						{
+							if (remap_ctrl & 0x03) argb8_convert |= (mask & 0x1u) << bit_offset;
+							if (remap_ctrl & 0x0C) argb8_convert |= (mask & 0x2u) << bit_offset;
+							if (remap_ctrl & 0x30) argb8_convert |= (mask & 0x4u) << bit_offset;
+							if (remap_ctrl & 0xC0) argb8_convert |= (mask & 0x8u) << bit_offset;
+						}
 					};
 
 					if (argb8_signed)
