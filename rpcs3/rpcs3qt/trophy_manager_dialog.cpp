@@ -33,7 +33,6 @@
 #include <QWheelEvent>
 #include <QGuiApplication>
 #include <QScreen>
-#include <QTimeZone>
 
 LOG_CHANNEL(gui_log, "GUI");
 
@@ -1343,7 +1342,7 @@ QDateTime trophy_manager_dialog::TickToDateTime(u64 tick)
 	const QDateTime datetime(
 		QDate(rtc_date.year, rtc_date.month, rtc_date.day),
 		QTime(rtc_date.hour, rtc_date.minute, rtc_date.second, rtc_date.microsecond / 1000),
-		QTimeZone::UTC);
+		Qt::TimeSpec::UTC);
 	return datetime.toLocalTime();
 }
 
