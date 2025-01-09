@@ -439,9 +439,9 @@ void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, emu_settings_type type)
 		m_broken_types.insert(type);
 	}
 
-	connect(checkbox, &QCheckBox::checkStateChanged, this, [type, this](Qt::CheckState val)
+	connect(checkbox, &QCheckBox::stateChanged, this, [type, this](int val)
 	{
-		const std::string str = val != Qt::Unchecked ? "true" : "false";
+		const std::string str = val != 0 ? "true" : "false";
 		SetSetting(type, str);
 	});
 
