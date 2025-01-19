@@ -7032,87 +7032,45 @@ public:
 	{
 		register_intrinsic("spu_fi", [&](llvm::CallInst* ci)
 		{
-			// TODO: adjustment for denormals(for accurate xfloat only?)
 			const auto a = bitcast<u32[4]>(value<f32[4]>(ci->getOperand(0)));
 			const auto b = bitcast<u32[4]>(value<f32[4]>(ci->getOperand(1)));
 
 			const auto base = (b & 0x007ffc00u) << 9; // Base fraction
 			const auto ymul = (b & 0x3ff) * (a & 0x7ffff); // Step fraction * Y fraction (fixed point at 2^-32)
-			const auto comparison = (ymul > base); // Should exponent be adjusted?
-			const auto bnew = (base - ymul) >> (zext<u32[4]>(comparison) ^ 9); // Shift one less bit if exponent is adjusted
-			const auto base_result = (b & 0xff800000u) | (bnew & ~0xff800000u); // Inject old sign and exponent
-			const auto adjustment = bitcast<u32[4]>(sext<s32[4]>(comparison)) & (1 << 23); // exponent adjustement for negative bnew
-			return clamp_smax(eval(bitcast<f32[4]>(base_result - adjustment)));
+			const auto bnew = bitcast<s32[4]>((base - ymul) >> 9) + (sext<s32[4]>(ymul <= base) & (1 << 23)); // Subtract and correct invisible fraction bit
+			return bitcast<f32[4]>((b & 0xff800000u) | (bitcast<u32[4]>(fpcast<f32[4]>(bnew)) & ~0xff800000u)); // Inject old sign and exponent
 		});
 
 		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
 
-		switch (g_cfg.core.spu_xfloat_accuracy)
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate)
 		{
-		case xfloat_accuracy::approximate:
+			const auto r = eval(fi(a, b));
+			set_vr(op.rt, r);
+			return;
+		}
+
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 		{
-			// For approximate, create a pattern but do not optimize yet
 			register_intrinsic("spu_re", [&](llvm::CallInst* ci)
 			{
-				const auto a = bitcast<u32[4]>(value<f32[4]>(ci->getOperand(0)));
-				const auto a_fraction = (a >> splat<u32[4]>(18)) & splat<u32[4]>(0x1F);
-				const auto a_exponent = (a & splat<u32[4]>(0x7F800000u));
-				const auto r_exponent = sub_sat(build<u16[8]>(0000, 0x7E80, 0000, 0x7E80, 0000, 0x7E80, 0000, 0x7E80), bitcast<u16[8]>(a_exponent));
-				const auto fix_exponent = select((a_exponent > 0), bitcast<u32[4]>(r_exponent), splat<u32[4]>(0x7F800000u));
-				const auto a_sign = (a & splat<u32[4]>(0x80000000));
-				value_t<u32[4]> b = eval(splat<u32[4]>(0));
-
-				for (u32 i = 0; i < 4; i++)
-				{
-					const auto eval_fraction = eval(extract(a_fraction, i));
-
-					value_t<u32> r_fraction = load_const<u32>(m_spu_frest_fraction_lut, eval_fraction);
-
-					b = eval(insert(b, i, r_fraction));
-				}
-
-				b = eval(b | fix_exponent | a_sign);
-
-				const auto base = (b & 0x007ffc00u) << 9; // Base fraction
-				const auto ymul = (b & 0x3ff) * (a & 0x7ffff); // Step fraction * Y fraction (fixed point at 2^-32)
-				const auto comparison = (ymul > base); // Should exponent be adjusted?
-				const auto bnew = (base - ymul) >> (zext<u32[4]>(comparison) ^ 9); // Shift one less bit if exponent is adjusted
-				const auto base_result = (b & 0xff800000u) | (bnew & ~0xff800000u); // Inject old sign and exponent
-				const auto adjustment = bitcast<u32[4]>(sext<s32[4]>(comparison)) & (1 << 23); // exponent adjustement for negative bnew
-				return clamp_smax(eval(bitcast<f32[4]>(base_result - adjustment)));
+				const auto a = value<f32[4]>(ci->getOperand(0));
+				// Gives accuracy penalty, frest result is within one newton-raphson iteration for accuracy
+				const auto approx_result = fsplat<f32[4]>(0.999875069f) / a;
+				return approx_result;
 			});
 
 			register_intrinsic("spu_rsqrte", [&](llvm::CallInst* ci)
 			{
-				const auto a = bitcast<u32[4]>(value<f32[4]>(ci->getOperand(0)));
-				const auto a_fraction = (a >> splat<u32[4]>(18)) & splat<u32[4]>(0x3F);
-				const auto a_exponent = (a >> splat<u32[4]>(23)) & splat<u32[4]>(0xFF);
-				value_t<u32[4]> b = eval(splat<u32[4]>(0));
-
-				for (u32 i = 0; i < 4; i++)
-				{
-					const auto eval_fraction = eval(extract(a_fraction, i));
-					const auto eval_exponent = eval(extract(a_exponent, i));
-
-					value_t<u32> r_fraction = load_const<u32>(m_spu_frsqest_fraction_lut, eval_fraction);
-					value_t<u32> r_exponent = load_const<u32>(m_spu_frsqest_exponent_lut, eval_exponent);
-
-					b = eval(insert(b, i, eval(r_fraction | r_exponent)));
-				}
-
-				const auto base = (b & 0x007ffc00u) << 9; // Base fraction
-				const auto ymul = (b & 0x3ff) * (a & 0x7ffff); // Step fraction * Y fraction (fixed point at 2^-32)
-				const auto comparison = (ymul > base); // Should exponent be adjusted?
-				const auto bnew = (base - ymul) >> (zext<u32[4]>(comparison) ^ 9); // Shift one less bit if exponent is adjusted
-				const auto base_result = (b & 0xff800000u) | (bnew & ~0xff800000u); // Inject old sign and exponent
-				const auto adjustment = bitcast<u32[4]>(sext<s32[4]>(comparison)) & (1 << 23); // exponent adjustement for negative bnew
-				return clamp_smax(eval(bitcast<f32[4]>(base_result - adjustment)));
+				const auto a = value<f32[4]>(ci->getOperand(0));
+				// Gives accuracy penalty, frsqest result is within one newton-raphson iteration for accuracy
+				const auto approx_result = fsplat<f32[4]>(0.999763668f) / fsqrt(fabs(a));
+				return approx_result;
 			});
-			break;
 		}
-		case xfloat_accuracy::relaxed:
+		else
 		{
-			// For relaxed, agressively optimize and use intrinsics, those make the results vary per cpu
+			// For relaxed use intrinsics, those make the results vary per cpu
 			register_intrinsic("spu_re", [&](llvm::CallInst* ci)
 			{
 				const auto a = value<f32[4]>(ci->getOperand(0));
@@ -7124,32 +7082,24 @@ public:
 				const auto a = value<f32[4]>(ci->getOperand(0));
 				return frsqe(a);
 			});
-			break;
-		}
-		default:
-			break;
 		}
 
-		// Do not pattern match for accurate
-		if(g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate || g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::relaxed)
+		if (const auto [ok, mb] = match_expr(b, frest(match<f32[4]>())); ok && mb.eq(a))
 		{
-			if (const auto [ok, mb] = match_expr(b, frest(match<f32[4]>())); ok && mb.eq(a))
-			{
-				erase_stores(b);
-				set_vr(op.rt, spu_re(a));
-				return;
-			}
+			erase_stores(b);
+			set_vr(op.rt, spu_re(a));
+			return;
+		}
 
-			if (const auto [ok, mb] = match_expr(b, frsqest(match<f32[4]>())); ok && mb.eq(a))
-			{
-				erase_stores(b);
-				set_vr(op.rt, spu_rsqrte(a));
-				return;
-			}
+		if (const auto [ok, mb] = match_expr(b, frsqest(match<f32[4]>())); ok && mb.eq(a))
+		{
+			erase_stores(b);
+			set_vr(op.rt, spu_rsqrte(a));
+			return;
 		}
 
 		const auto r = eval(fi(a, b));
-		if (!m_interp_magn && g_cfg.core.spu_xfloat_accuracy != xfloat_accuracy::accurate)
+		if (!m_interp_magn)
 			spu_log.todo("[%s:0x%05x] Unmatched spu_fi found", m_hash, m_pos);
 
 		set_vr(op.rt, r);
