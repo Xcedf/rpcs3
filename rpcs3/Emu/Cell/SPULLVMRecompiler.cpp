@@ -6394,7 +6394,7 @@ public:
 			const auto a = value<f32[4]>(ci->getOperand(0));
 			const auto b = value<f32[4]>(ci->getOperand(1));
 
-			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
+			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate || g_cfg.core.spu_approx_fs)
 			{
 				const auto bc = clamp_smax(b); // for #4478
 				return eval(a - bc);
@@ -6424,10 +6424,15 @@ public:
 
 		register_intrinsic("spu_fm", [&](llvm::CallInst* ci)
 		{
-			const auto a = value<f32[4]>(ci->getOperand(0));
-			const auto b = value<f32[4]>(ci->getOperand(1));
+			auto a = value<f32[4]>(ci->getOperand(0));
+			auto b = value<f32[4]>(ci->getOperand(1));
+			if (g_cfg.core.spu_gta_fm)
+			{
+				a = clamp_smax(a);
+				b = clamp_smax(b);
+			}
 
-			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
+			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate || g_cfg.core.spu_approx_fm)
 			{
 				if (a.value == b.value)
 				{
@@ -6807,7 +6812,7 @@ public:
 			const auto b = value<f32[4]>(ci->getOperand(1));
 			const auto c = value<f32[4]>(ci->getOperand(2));
 
-			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
+			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate || g_cfg.core.spu_approx_fma)
 			{
 				const auto ma = sext<s32[4]>(fcmp_uno(a != fsplat<f32[4]>(0.)));
 				const auto mb = sext<s32[4]>(fcmp_uno(b != fsplat<f32[4]>(0.)));
