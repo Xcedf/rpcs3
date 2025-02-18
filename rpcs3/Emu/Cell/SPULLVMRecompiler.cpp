@@ -6394,7 +6394,7 @@ public:
 			const auto a = value<f32[4]>(ci->getOperand(0));
 			const auto b = value<f32[4]>(ci->getOperand(1));
 
-			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
+			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate || g_cfg.core.spu_approx_fs)
 			{
 				const auto bc = clamp_smax(b); // for #4478
 				return eval(a - bc);
@@ -6424,10 +6424,15 @@ public:
 
 		register_intrinsic("spu_fm", [&](llvm::CallInst* ci)
 		{
-			const auto a = value<f32[4]>(ci->getOperand(0));
-			const auto b = value<f32[4]>(ci->getOperand(1));
+			auto a = value<f32[4]>(ci->getOperand(0));
+			auto b = value<f32[4]>(ci->getOperand(1));
+			if (g_cfg.core.spu_gta_fm)
+			{
+				a = clamp_smax(a);
+				b = clamp_smax(b);
+			}
 
-			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
+			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate || g_cfg.core.spu_approx_fm)
 			{
 				if (a.value == b.value)
 				{
@@ -6772,8 +6777,11 @@ public:
 			const auto a = value<f32[4]>(ci->getOperand(0));
 			const auto b = value<f32[4]>(ci->getOperand(1));
 			const auto c = value<f32[4]>(ci->getOperand(2));
-
-			return fma32x4(eval(-clamp_smax(a)), clamp_smax(b), c);
+			const auto ma = sext<s32[4]>(fcmp_uno(a != fsplat<f32[4]>(0.)));
+			const auto mb = sext<s32[4]>(fcmp_uno(b != fsplat<f32[4]>(0.)));
+			const auto ca = bitcast<f32[4]>(bitcast<s32[4]>(a) & mb);
+			const auto cb = bitcast<f32[4]>(bitcast<s32[4]>(b) & ma);
+			return fma32x4(eval(-ca), eval(cb), c);
 		});
 
 		set_vr(op.rt4, fnms(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb), get_vr<f32[4]>(op.rc)));
@@ -6807,7 +6815,7 @@ public:
 			const auto b = value<f32[4]>(ci->getOperand(1));
 			const auto c = value<f32[4]>(ci->getOperand(2));
 
-			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
+			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate || g_cfg.core.spu_approx_fma)
 			{
 				const auto ma = sext<s32[4]>(fcmp_uno(a != fsplat<f32[4]>(0.)));
 				const auto mb = sext<s32[4]>(fcmp_uno(b != fsplat<f32[4]>(0.)));
@@ -7127,9 +7135,7 @@ public:
 
 		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
 
-		switch (g_cfg.core.spu_xfloat_accuracy)
-		{
-		case xfloat_accuracy::approximate:
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate || g_cfg.core.spu_approx_fi)
 		{
 			// For approximate, create a pattern but do not optimize yet
 			register_intrinsic("spu_re", [&](llvm::CallInst* ci)
@@ -7188,9 +7194,8 @@ public:
 				const auto adjustment = bitcast<u32[4]>(sext<s32[4]>(comparison)) & (1 << 23); // exponent adjustement for negative bnew
 				return clamp_smax(eval(bitcast<f32[4]>(base_result - adjustment)));
 			});
-			break;
 		}
-		case xfloat_accuracy::relaxed:
+		else if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::relaxed)
 		{
 			// For relaxed, agressively optimize and use intrinsics, those make the results vary per cpu
 			register_intrinsic("spu_re", [&](llvm::CallInst* ci)
@@ -7204,10 +7209,6 @@ public:
 				const auto a = value<f32[4]>(ci->getOperand(0));
 				return frsqe(a);
 			});
-			break;
-		}
-		default:
-			break;
 		}
 
 		// Do not pattern match for accurate
