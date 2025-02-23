@@ -6780,8 +6780,11 @@ public:
 			const auto a = value<f32[4]>(ci->getOperand(0));
 			const auto b = value<f32[4]>(ci->getOperand(1));
 			const auto c = value<f32[4]>(ci->getOperand(2));
-
-			return fma32x4(eval(-clamp_smax(a)), clamp_smax(b), c);
+			const auto ma = sext<s32[4]>(fcmp_uno(a != fsplat<f32[4]>(0.)));
+			const auto mb = sext<s32[4]>(fcmp_uno(b != fsplat<f32[4]>(0.)));
+			const auto ca = bitcast<f32[4]>(bitcast<s32[4]>(a) & mb);
+			const auto cb = bitcast<f32[4]>(bitcast<s32[4]>(b) & ma);
+			return fma32x4(eval(-ca), eval(cb), c);
 		});
 
 		set_vr(op.rt4, fnms(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb), get_vr<f32[4]>(op.rc)));
