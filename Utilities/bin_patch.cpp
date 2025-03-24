@@ -907,6 +907,12 @@ static usz apply_modification(std::vector<u32>& applied, patch_engine::patch_inf
 {
 	const usz old_applied_size = applied.size();
 
+	if (patch.description.find("cellSpurs urgent commands hack") != umax && patch.hash.find("PRX-") != umax)
+	{
+		// Deprecated patch, no longer supported on RPCS3
+		return old_applied_size;
+	}
+
 	// Update configurable values
 	for (const auto& [key, config_value] : patch.actual_config_values)
 	{
