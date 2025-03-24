@@ -453,6 +453,7 @@ auto ppu_feed_data(ppu_thread& ppu, u64 addr)
 		{
 			// Reservation was lost
 			ppu.raddr = 0;
+			ppu.res_cached = 0;
 		}
 	}
 	else
@@ -472,6 +473,7 @@ auto ppu_feed_data(ppu_thread& ppu, u64 addr)
 		if (std::memcmp(buffer + offs, src, size))
 		{
 			ppu.raddr = 0;
+			ppu.res_cached = 0;
 		}
 	}
 
