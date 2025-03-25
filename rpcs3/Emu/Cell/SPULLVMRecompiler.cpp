@@ -6364,7 +6364,7 @@ public:
 				return eval(sext<s32[4]>(mai > mbi));
 			}
 
-			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
+			if (true || g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 			{
 				return eval(sext<s32[4]>(fcmp_uno(ma > mb) & (mai > mbi)));
 			}
@@ -6643,7 +6643,7 @@ public:
 				return eval(sext<s32[4]>(bitcast<s32[4]>(a) == bitcast<s32[4]>(b)));
 			}
 
-			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
+			if (true || g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 			{
 				return eval(sext<s32[4]>(fcmp_ord(a == b)) | sext<s32[4]>(bitcast<s32[4]>(a) == bitcast<s32[4]>(b)));
 			}
@@ -6720,7 +6720,7 @@ public:
 				return eval(sext<s32[4]>(bitcast<s32[4]>(fa) == bitcast<s32[4]>(fb)));
 			}
 
-			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
+			if (true || g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 			{
 				return eval(sext<s32[4]>(fcmp_ord(fa == fb)) | sext<s32[4]>(bitcast<s32[4]>(fa) == bitcast<s32[4]>(fb)));
 			}
@@ -7112,7 +7112,7 @@ public:
 			const auto b = value<f32[4]>(ci->getOperand(1));
 			const auto c = value<f32[4]>(ci->getOperand(2));
 
-			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
+			if (true || g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 			{
 				return fma32x4(clamp_smax(a), clamp_smax(b), eval(-c));
 			}
@@ -7162,10 +7162,10 @@ public:
 
 		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
 
-		switch (g_cfg.core.spu_xfloat_accuracy)
+		/*switch (g_cfg.core.spu_xfloat_accuracy)
 		{
 		case xfloat_accuracy::approximate:
-		{
+		{*/
 			// For approximate, create a pattern but do not optimize yet
 			register_intrinsic("spu_re", [&](llvm::CallInst* ci)
 			{
@@ -7223,7 +7223,7 @@ public:
 				const auto adjustment = bitcast<u32[4]>(sext<s32[4]>(comparison)) & (1 << 23); // exponent adjustement for negative bnew
 				return clamp_smax(eval(bitcast<f32[4]>(base_result - adjustment)));
 			});
-			break;
+			/*break;
 		}
 		case xfloat_accuracy::relaxed:
 		{
@@ -7243,7 +7243,7 @@ public:
 		}
 		default:
 			break;
-		}
+		}*/
 
 		// Do not pattern match for accurate
 		if(g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate || g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::relaxed)
