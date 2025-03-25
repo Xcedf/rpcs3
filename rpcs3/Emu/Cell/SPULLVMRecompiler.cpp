@@ -6364,7 +6364,7 @@ public:
 				return eval(sext<s32[4]>(mai > mbi));
 			}
 
-			if (true || g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
+			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 			{
 				return eval(sext<s32[4]>(fcmp_uno(ma > mb) & (mai > mbi)));
 			}
@@ -6643,7 +6643,7 @@ public:
 				return eval(sext<s32[4]>(bitcast<s32[4]>(a) == bitcast<s32[4]>(b)));
 			}
 
-			if (true || g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
+			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 			{
 				return eval(sext<s32[4]>(fcmp_ord(a == b)) | sext<s32[4]>(bitcast<s32[4]>(a) == bitcast<s32[4]>(b)));
 			}
@@ -6720,7 +6720,7 @@ public:
 				return eval(sext<s32[4]>(bitcast<s32[4]>(fa) == bitcast<s32[4]>(fb)));
 			}
 
-			if (true || g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
+			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 			{
 				return eval(sext<s32[4]>(fcmp_ord(fa == fb)) | sext<s32[4]>(bitcast<s32[4]>(fa) == bitcast<s32[4]>(fb)));
 			}
@@ -7112,7 +7112,7 @@ public:
 			const auto b = value<f32[4]>(ci->getOperand(1));
 			const auto c = value<f32[4]>(ci->getOperand(2));
 
-			if (true || g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
+			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 			{
 				return fma32x4(clamp_smax(a), clamp_smax(b), eval(-c));
 			}
