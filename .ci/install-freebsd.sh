@@ -9,7 +9,7 @@ export ASSUME_ALWAYS_YES=true
 pkg info # debug
 
 # WITH_LLVM
-pkg install llvm19
+pkg install llvm18
 
 # Mandatory dependencies (qt6-base is pulled via qt6-multimedia)
 pkg install git ccache cmake ninja qt6-multimedia qt6-svg glew openal-soft ffmpeg
